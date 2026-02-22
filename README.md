@@ -28,10 +28,6 @@ face_recognition_system/
 │   └── embeddings/
 │       └── face_db.pkl         ← Live recognition database (auto-created)
 │
-├── models/
-│   ├── face_embedder.h5        ← Trained CNN weights (auto-saved after training)
-│   └── label_map.pkl           ← Class label mapping
-│
 ├── logs/
 │   ├── training_history.png    ← Accuracy/Loss curves
 │   ├── confusion_matrix.png    ← Evaluation matrix
@@ -232,4 +228,5 @@ pip install tensorflow-cpu  # CPU only
 **Low accuracy:**
 - Ensure face images are well-lit and front-facing
 - Add more training samples per person
+
 - Lower the threshold slightly: `--threshold 0.55`
