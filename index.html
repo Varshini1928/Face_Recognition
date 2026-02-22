@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Recognition System</title>
+<style>
+  :root {
+    --primary: #6C63FF;
+    --dark: #0F0F1A;
+    --card: #1A1A2E;
+    --card2: #16213E;
+    --accent: #00D4AA;
+    --danger: #FF4757;
+    --text: #E8E8F0;
+    --muted: #8888AA;
+    --border: #2A2A4A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--dark); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* Nav */
+  nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 2rem; height: 60px; }
+  .nav-brand { font-size: 1.2rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+  .nav-brand span { font-size: 1.4rem; }
+  .nav-tab { padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: var(--muted); transition: all 0.2s; border: none; background: none; }
+  .nav-tab:hover, .nav-tab.active { background: var(--primary); color: white; }
+  .nav-status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .status-dot.online { background: var(--accent); }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .card-stats { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; text-align: center; }
+  .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+  .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* Video */
+  .video-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
+  .video-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .video-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.9rem; flex-direction: column; gap: 0.5rem; aspect-ratio: 4/3; }
+  .video-placeholder .icon { font-size: 3rem; opacity: 0.3; }
+
+  /* Buttons */
+  .btn { padding: 0.55rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #5A52E0; transform: translateY(-1px); }
+  .btn-success { background: var(--accent); color: #000; }
+  .btn-success:hover { background: #00B894; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: #E04060; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Forms */
+  input[type=text], input[type=file] {
+    width: 100%; padding: 0.6rem 0.9rem; background: var(--dark); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.9rem; margin-bottom: 0.75rem;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+  label { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; display: block; }
+
+  /* Results */
+  .result-box { background: var(--dark); border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+  .face-tag { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem;
+              border-radius: 20px; font-size: 0.82rem; margin: 0.2rem; }
+  .face-tag.known { background: rgba(0,212,170,0.15); border: 1px solid var(--accent); color: var(--accent); }
+  .face-tag.unknown { background: rgba(255,71,87,0.15); border: 1px solid var(--danger); color: var(--danger); }
+
+  /* Person list */
+  .person-row { display: flex; align-items: center; justify-content: space-between;
+                padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;
+                background: var(--dark); border: 1px solid var(--border); }
+  .person-name { font-weight: 500; }
+  .person-samples { font-size: 0.78rem; color: var(--muted); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.8rem 1.5rem; border-radius: 8px;
+           font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 999; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  #toast.success { background: var(--accent); color: #000; }
+  #toast.error { background: var(--danger); color: white; }
+  #toast.info { background: var(--primary); color: white; }
+
+  /* Result image */
+  .result-img { width: 100%; border-radius: 8px; margin-top: 0.75rem; }
+
+  /* Responsive */
+  @media(max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand"><span>🎭</span> FaceID System</div>
+  <button class="nav-tab active" onclick="showTab('dashboard')">Dashboard</button>
+  <button class="nav-tab" onclick="showTab('live')">Live Feed</button>
+  <button class="nav-tab" onclick="showTab('recognize')">Recognize</button>
+  <button class="nav-tab" onclick="showTab('register')">Register</button>
+  <button class="nav-tab" onclick="showTab('manage')">Manage</button>
+  <div class="nav-status"><div class="status-dot online" id="statusDot"></div><span id="statusText">System Online</span></div>
+</nav>
+
+<div class="container">
+
+  <!-- DASHBOARD -->
+  <div class="tab-content active" id="tab-dashboard">
+    <h1 style="margin-bottom:1.5rem;font-size:1.4rem;">System Overview</h1>
+    <div class="grid-3" style="margin-bottom:1.5rem;">
+      <div class="card-stats"><div class="stat-value" id="statPersons">–</div><div class="stat-label">Registered Persons</div></div>
+      <div class="card-stats"><div class="stat-value" id="statSamples">–</div><div class="stat-label">Total Samples</div></div>
+      <div class="card-stats"><div class="stat-value" id="statThreshold">–</div><div class="stat-label">Confidence Threshold</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>📌 Quick Start</h2>
+        <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;">
+          1. Go to <b>Register</b> → upload photos or use webcam to add people.<br>
+          2. Go to <b>Live Feed</b> to run real-time recognition from your webcam.<br>
+          3. Go to <b>Recognize</b> to identify faces in any uploaded image.<br>
+          4. Go to <b>Manage</b> to view and remove registered persons.
+        </p>
+      </div>
+      <div class="card">
+        <h2>⚙️ System Info</h2>
+        <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;">
+          <b>Detector:</b> <span id="infoDetector">–</span><br>
+          <b>Embedder:</b> CNN (128-d L2-normalized)<br>
+          <b>Matching:</b> Cosine similarity<br>
+          <b>Backend:</b> Python · OpenCV · TensorFlow
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE FEED -->
+  <div class="tab-content" id="tab-live">
+    <h1 style="margin-bottom:1.5rem;font-size:1.4rem;">Live Recognition</h1>
+    <div class="grid-2">
+      <div class="card">
+        <h2>📹 Camera Feed</h2>
+        <div class="video-wrap" id="liveWrap">
+          <div class="video-placeholder" id="livePlaceholder"><div class="icon">📷</div><span>Camera not started</span></div>
+          <img id="liveImg" style="display:none;" alt="Live Feed">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-success" onclick="startCamera()">▶ Start Camera</button>
+          <button class="btn btn-danger" onclick="stopCamera()">■ Stop</button>
+          <button class="btn btn-ghost" onclick="takeSnapshot()">📸 Snapshot</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>🔍 Snapshot Recognition</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;">Click "Snapshot" to capture and recognize faces from the live feed.</p>
+        <div id="snapshotResults">
+          <div style="color:var(--muted);font-size:0.85rem;">No snapshot taken yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECOGNIZE -->
+  <div class="tab-content" id="tab-recognize">
+    <h1 style="margin-bottom:1.5rem;font-size:1.4rem;">Image Recognition</h1>
+    <div class="grid-2">
+      <div class="card">
+        <h2>🖼️ Upload Image</h2>
+        <label>Select an image with faces to recognize</label>
+        <input type="file" id="recognizeFile" accept="image/*" onchange="previewRecognize(event)">
+        <div class="video-wrap" style="margin-bottom:1rem;background:#111;">
+          <img id="recognizePreview" style="display:none;width:100%;" alt="Preview">
+          <div class="video-placeholder" id="recognizePlaceholder"><div class="icon">🖼️</div><span>Image will appear here</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="runRecognize()">🔍 Recognize Faces</button>
+      </div>
+      <div class="card">
+        <h2>📊 Results</h2>
+        <div id="recognizeResults">
+          <div style="color:var(--muted);font-size:0.85rem;">Upload an image and click Recognize.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="tab-content" id="tab-register">
+    <h1 style="margin-bottom:1.5rem;font-size:1.4rem;">Register Person</h1>
+    <div class="grid-2">
+      <div class="card">
+        <h2>📁 Register via File Upload</h2>
+        <label>Person Name</label>
+        <input type="text" id="regName" placeholder="e.g. Alice Johnson">
+        <label>Photos (1 or more, face must be visible)</label>
+        <input type="file" id="regFiles" accept="image/*" multiple>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="registerFiles()">➕ Register</button>
+        </div>
+        <div id="regResult" style="margin-top:1rem;"></div>
+      </div>
+      <div class="card">
+        <h2>📷 Register via Webcam</h2>
+        <label>Person Name</label>
+        <input type="text" id="regSnapName" placeholder="e.g. Bob Smith">
+        <div class="video-wrap" id="regVideoWrap" style="margin-bottom:0.75rem;">
+          <div class="video-placeholder" id="regPlaceholder"><div class="icon">📷</div><span>Camera for registration</span></div>
+          <img id="regImg" style="display:none;" alt="Registration Feed">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-ghost" onclick="startRegCamera()">▶ Start</button>
+          <button class="btn btn-success" onclick="captureAndRegister()">📸 Capture & Register</button>
+          <button class="btn btn-danger" onclick="stopRegCamera()">■ Stop</button>
+        </div>
+        <div id="regSnapResult" style="margin-top:0.75rem;font-size:0.85rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANAGE -->
+  <div class="tab-content" id="tab-manage">
+    <h1 style="margin-bottom:1.5rem;font-size:1.4rem;">Manage Persons</h1>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2>👥 Registered Persons</h2>
+        <button class="btn btn-ghost" onclick="loadPersons()">🔄 Refresh</button>
+      </div>
+      <div id="personsList"><div style="color:var(--muted);">Loading...</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ──────────────── TAB ROUTING ────────────────
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'manage') loadPersons();
+  if (id === 'dashboard') loadStats();
+}
+
+// ──────────────── TOAST ────────────────
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+
+// ──────────────── STATS ────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('statPersons').textContent = d.registered_persons;
+    document.getElementById('statSamples').textContent = d.total_samples;
+    document.getElementById('statThreshold').textContent = (d.threshold * 100).toFixed(0) + '%';
+    document.getElementById('infoDetector').textContent = d.detector;
+  } catch(e) { console.error(e); }
+}
+
+// ──────────────── LIVE CAMERA ────────────────
+let cameraOn = false;
+function startCamera() {
+  document.getElementById('livePlaceholder').style.display = 'none';
+  document.getElementById('liveImg').style.display = 'block';
+  document.getElementById('liveImg').src = '/video_feed?' + Date.now();
+  cameraOn = true;
+  toast('Camera started', 'success');
+}
+function stopCamera() {
+  document.getElementById('liveImg').style.display = 'none';
+  document.getElementById('livePlaceholder').style.display = 'flex';
+  document.getElementById('liveImg').src = '';
+  cameraOn = false;
+  fetch('/api/camera/stop', {method:'POST'});
+}
+async function takeSnapshot() {
+  if (!cameraOn) { toast('Start camera first', 'error'); return; }
+  // capture frame from video element
+  const img = document.getElementById('liveImg');
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const b64 = canvas.toDataURL('image/jpeg');
+  const r = await fetch('/api/recognize/base64', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image: b64})});
+  const d = await r.json();
+  if (d.status === 'ok') renderSnapshotResults(d);
+}
+function renderSnapshotResults(d) {
+  const el = document.getElementById('snapshotResults');
+  let html = `<img src="${d.image}" class="result-img"><div style="margin-top:0.75rem;">`;
+  if (d.count === 0) {
+    html += '<div style="color:var(--muted);">No faces detected.</div>';
+  } else {
+    d.faces.forEach(f => {
+      const cls = f.name === 'Unknown' ? 'unknown' : 'known';
+      html += `<span class="face-tag ${cls}">${f.name === 'Unknown' ? '❓' : '✅'} ${f.name} — ${f.confidence}%</span>`;
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ──────────────── RECOGNIZE FILE ────────────────
+function previewRecognize(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('recognizePreview').src = url;
+  document.getElementById('recognizePreview').style.display = 'block';
+  document.getElementById('recognizePlaceholder').style.display = 'none';
+}
+async function runRecognize() {
+  const file = document.getElementById('recognizeFile').files[0];
+  if (!file) { toast('Please select an image', 'error'); return; }
+  const fd = new FormData();
+  fd.append('image', file);
+  const r = await fetch('/api/recognize', {method:'POST', body: fd});
+  const d = await r.json();
+  if (d.status === 'ok') {
+    const el = document.getElementById('recognizeResults');
+    let html = `<img src="data:image/jpeg;base64,${d.image}" class="result-img"><div style="margin-top:0.75rem;">`;
+    if (d.count === 0) {
+      html += '<div style="color:var(--muted);">No faces detected.</div>';
+    } else {
+      d.faces.forEach(f => {
+        const cls = f.name === 'Unknown' ? 'unknown' : 'known';
+        html += `<span class="face-tag ${cls}">${f.name === 'Unknown' ? '❓' : '✅'} ${f.name} — ${f.confidence}%</span>`;
+      });
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  } else {
+    toast(d.error || 'Error', 'error');
+  }
+}
+
+// ──────────────── REGISTER FILE ────────────────
+async function registerFiles() {
+  const name = document.getElementById('regName').value.trim();
+  const files = document.getElementById('regFiles').files;
+  if (!name) { toast('Enter a name', 'error'); return; }
+  if (!files.length) { toast('Select at least one image', 'error'); return; }
+  const fd = new FormData();
+  fd.append('name', name);
+  for (let f of files) fd.append('images', f);
+  const r = await fetch('/api/register', {method:'POST', body: fd});
+  const d = await r.json();
+  const el = document.getElementById('regResult');
+  if (d.status === 'ok') {
+    el.innerHTML = `<div style="color:var(--accent);">✅ ${d.message}</div>`;
+    toast(d.message, 'success');
+  } else {
+    el.innerHTML = `<div style="color:var(--danger);">❌ ${(d.errors||[]).join(', ')}</div>`;
+    toast('Registration failed', 'error');
+  }
+}
+
+// ──────────────── REGISTER WEBCAM ────────────────
+let regCamOn = false;
+function startRegCamera() {
+  document.getElementById('regPlaceholder').style.display = 'none';
+  document.getElementById('regImg').style.display = 'block';
+  document.getElementById('regImg').src = '/video_feed?' + Date.now();
+  regCamOn = true;
+}
+function stopRegCamera() {
+  document.getElementById('regImg').style.display = 'none';
+  document.getElementById('regPlaceholder').style.display = 'flex';
+  document.getElementById('regImg').src = '';
+  regCamOn = false;
+}
+async function captureAndRegister() {
+  const name = document.getElementById('regSnapName').value.trim();
+  if (!name) { toast('Enter a name first', 'error'); return; }
+  if (!regCamOn) { toast('Start camera first', 'error'); return; }
+  const img = document.getElementById('regImg');
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 480;
+  canvas.getContext('2d').drawImage(img, 0, 0, 640, 480);
+  const b64 = canvas.toDataURL('image/jpeg');
+  const r = await fetch('/api/register/snapshot', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, image: b64})});
+  const d = await r.json();
+  const el = document.getElementById('regSnapResult');
+  if (d.status === 'ok') {
+    el.innerHTML = `<span style="color:var(--accent)">✅ ${d.message}</span>`;
+    toast(d.message, 'success');
+  } else {
+    el.innerHTML = `<span style="color:var(--danger)">❌ ${d.error}</span>`;
+    toast(d.error, 'error');
+  }
+}
+
+// ──────────────── MANAGE PERSONS ────────────────
+async function loadPersons() {
+  const r = await fetch('/api/persons');
+  const d = await r.json();
+  const el = document.getElementById('personsList');
+  if (!d.persons.length) {
+    el.innerHTML = '<div style="color:var(--muted);">No persons registered yet.</div>';
+    return;
+  }
+  el.innerHTML = d.persons.map(p => `
+    <div class="person-row">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div class="avatar">${p.name[0]}</div>
+        <div>
+          <div class="person-name">${p.name}</div>
+          <div class="person-samples">${p.samples} sample${p.samples > 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <button class="btn btn-danger" style="padding:0.3rem 0.8rem;font-size:0.82rem;" onclick="deletePerson('${p.name}')">🗑 Delete</button>
+    </div>
+  `).join('');
+}
+async function deletePerson(name) {
+  if (!confirm(`Delete '${name}' from database?`)) return;
+  const r = await fetch('/api/persons/' + encodeURIComponent(name), {method:'DELETE'});
+  const d = await r.json();
+  if (d.status === 'ok') { toast(`Deleted '${name}'`, 'success'); loadPersons(); loadStats(); }
+  else toast(d.message, 'error');
+}
+
+// Init
+loadStats();
+</script>
+</body>
+</html>
